@@ -5,6 +5,7 @@ const COLUMN_MAPPINGS = {
     telefone: ['telefone', 'phone', 'tel', 'celular', 'mobile', 'whatsapp', 'fone', 'número', 'numero'],
     email: ['email', 'e-mail', 'mail', 'correio'],
     empresa: ['empresa', 'company', 'organização', 'organizacao', 'org', 'firma'],
+    vendedor: ['vendedor', 'responsavel', 'sales', 'salesperson', 'consultor', 'atendente'],
 };
 
 function normalizeHeader(header) {
@@ -63,6 +64,7 @@ export function mapRowsToLeads(rows, mapping) {
             telefone: mapping.telefone !== undefined ? String(row[mapping.telefone] || '') : '',
             email: mapping.email !== undefined ? String(row[mapping.email] || '') : '',
             empresa: mapping.empresa !== undefined ? String(row[mapping.empresa] || '') : '',
+            vendedor: mapping.vendedor !== undefined ? String(row[mapping.vendedor] || '') : '',
         };
         return lead;
     }).filter(lead => lead.telefone || lead.nome || lead.email);

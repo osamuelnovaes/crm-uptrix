@@ -52,8 +52,11 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
     const handleImport = () => {
         if (!parseResult) return;
         const leads = mapRowsToLeads(parseResult.rows, mapping);
-        // Atribuir vendedor a todos os leads importados
-        const leadsWithVendedor = leads.map(l => ({ ...l, vendedor }));
+        // Atribuir vendedor: usa o do dropdown se selecionado, senão usa o da planilha
+        const leadsWithVendedor = leads.map(l => ({
+            ...l,
+            vendedor: vendedor || l.vendedor || ''
+        }));
         onImport(leadsWithVendedor);
         onClose();
     };
@@ -103,10 +106,13 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
                             </p>
 
                             <div className="mapping-grid">
-                                {['nome', 'telefone', 'email', 'empresa'].map(field => (
+                                {['nome', 'telefone', 'email', 'empresa', 'vendedor'].map(field => (
                                     <div key={field} className="mapping-row">
                                         <label className="mapping-label">
-                                            {field === 'nome' ? 'Nome' : field === 'telefone' ? 'Telefone' : field === 'email' ? 'Email' : 'Empresa'}
+                                            {field === 'nome' ? 'Nome' :
+                                                field === 'telefone' ? 'Telefone' :
+                                                    field === 'email' ? 'Email' :
+                                                        field === 'vendedor' ? 'Vendedor' : 'Empresa'}
                                         </label>
                                         <ArrowRight size={16} className="mapping-arrow" />
                                         <select
@@ -163,6 +169,7 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
                                                     <th>Telefone</th>
                                                     <th>Email</th>
                                                     <th>Empresa</th>
+                                                    <th>Vendedor</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -172,6 +179,7 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
                                                         <td>{lead.telefone || <span className="empty-cell">—</span>}</td>
                                                         <td>{lead.email || <span className="empty-cell">—</span>}</td>
                                                         <td>{lead.empresa || <span className="empty-cell">—</span>}</td>
+                                                        <td>{lead.vendedor || <span className="empty-cell">—</span>}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
