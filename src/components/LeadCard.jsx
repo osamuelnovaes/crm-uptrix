@@ -1,4 +1,5 @@
-import { Phone, Mail, Building2, GripVertical, User, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Phone, Mail, Building2, GripVertical, User, Trash2, Check, X } from 'lucide-react';
 import { getStage } from '../utils/stages';
 
 function getDisplayName(lead) {
@@ -8,26 +9,51 @@ function getDisplayName(lead) {
     return `Lead #${lead.id}`;
 }
 
-export default function LeadCard({ lead, onClick, onDelete, provided }) {
+export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragEnd }) {
     const stage = getStage(lead.stage);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = (e) => {
+    // reset delete state if mouse leaves card
+    const handleMouseLeave = () => {
+        if (isDeleting) setIsDeleting(false);
+    };
+
+    const handleDeleteClick = (e) => {
         e.stopPropagation();
-        if (window.confirm('Excluir este lead?')) {
+        if (isDeleting) {
             onDelete(lead.id);
+        } else {
+            setIsDeleting(true);
         }
+    };
+
+    const handleCancelDelete = (e) => {
+        e.stopPropagation();
+        setIsDeleting(false);
+    };
+
+    const handleDragStart = (e) => {
+        // Set drag data
+        e.dataTransfer.effectAllowed = 'move';
+        // We can set data if needed, but we use state in parent
+        onDragStart(lead.id);
+
+        // Add a ghost image or styling class if needed
+        // native drag image is usually fine
     };
 
     return (
         <div
             className="lead-card"
+            draggable="true"
+            onDragStart={handleDragStart}
+            onDragEnd={onDragEnd}
             onClick={() => onClick(lead)}
-            ref={provided?.innerRef}
-            {...provided?.draggableProps}
-            {...provided?.dragHandleProps}
+            onMouseLeave={handleMouseLeave}
             style={{
-                ...provided?.draggableProps?.style,
                 borderLeft: `3px solid ${stage.color}`,
+                cursor: 'grab',
+                opacity: isDeleting ? 0.9 : 1
             }}
         >
             <div className="lead-card-header">
@@ -35,9 +61,30 @@ export default function LeadCard({ lead, onClick, onDelete, provided }) {
                     <GripVertical size={14} />
                 </div>
                 <h4 className="lead-card-name">{getDisplayName(lead)}</h4>
-                <button className="lead-card-delete" onClick={handleDelete} title="Excluir lead">
-                    <Trash2 size={13} />
-                </button>
+
+                {isDeleting ? (
+                    <div className="delete-confirm-actions">
+                        <button
+                            className="lead-card-delete confirm"
+                            onClick={handleDeleteClick}
+                            title="Confirmar exclusão"
+                            style={{ color: '#ef4444', background: '#fee2e2' }}
+                        >
+                            <Check size={13} />
+                        </button>
+                        <button
+                            className="lead-card-delete cancel"
+                            onClick={handleCancelDelete}
+                            title="Cancelar"
+                        >
+                            <X size={13} />
+                        </button>
+                    </div>
+                ) : (
+                    <button className="lead-card-delete" onClick={handleDeleteClick} title="Excluir lead">
+                        <Trash2 size={13} />
+                    </button>
+                )}
             </div>
 
             <div className="lead-card-info">

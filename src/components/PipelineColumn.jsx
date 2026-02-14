@@ -1,12 +1,49 @@
-import { Droppable, Draggable } from '@hello-pangea/dnd';
+import { useState } from 'react';
 import LeadCard from './LeadCard';
 import * as Icons from 'lucide-react';
 
-export default function PipelineColumn({ stage, leads, onLeadClick, onDeleteLead }) {
+export default function PipelineColumn({
+    stage,
+    leads,
+    onLeadClick,
+    onDeleteLead,
+    onDragStart,
+    onDragEnd,
+    onDrop,
+    isDragging
+}) {
     const IconComponent = Icons[stage.icon] || Icons.Circle;
+    const [isDragOver, setIsDragOver] = useState(false);
+
+    const handleDragOver = (e) => {
+        if (isDragging) {
+            e.preventDefault();
+            setIsDragOver(true);
+        }
+    };
+
+    const handleDragLeave = () => {
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        onDrop(stage.id);
+    };
 
     return (
-        <div className="pipeline-column">
+        <div
+            className="pipeline-column"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{
+                borderColor: isDragOver ? stage.color : 'var(--border-light)',
+                boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : 'none',
+                transition: 'all 0.2s ease'
+            }}
+        >
             <div className="pipeline-column-header" style={{ borderBottom: `2px solid ${stage.color}` }}>
                 <div className="column-header-left">
                     <IconComponent size={16} style={{ color: stage.color }} />
@@ -17,37 +54,28 @@ export default function PipelineColumn({ stage, leads, onLeadClick, onDeleteLead
                 </span>
             </div>
 
-            <Droppable droppableId={stage.id}>
-                {(provided, snapshot) => (
-                    <div
-                        className={`pipeline-column-body ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        style={{
-                            background: snapshot.isDraggingOver ? stage.bgColor : 'transparent',
-                        }}
-                    >
-                        {leads.map((lead, index) => (
-                            <Draggable key={lead.id} draggableId={String(lead.id)} index={index}>
-                                {(provided) => (
-                                    <LeadCard
-                                        lead={lead}
-                                        onClick={onLeadClick}
-                                        onDelete={onDeleteLead}
-                                        provided={provided}
-                                    />
-                                )}
-                            </Draggable>
-                        ))}
-                        {provided.placeholder}
-                        {leads.length === 0 && !snapshot.isDraggingOver && (
-                            <div className="column-empty">
-                                Arraste leads aqui
-                            </div>
-                        )}
+            <div
+                className={`pipeline-column-body ${isDragOver ? 'drag-over' : ''}`}
+                style={{
+                    background: isDragOver ? stage.bgColor : 'transparent',
+                }}
+            >
+                {leads.map((lead, index) => (
+                    <LeadCard
+                        key={lead.id}
+                        lead={lead}
+                        onClick={onLeadClick}
+                        onDelete={onDeleteLead}
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                    />
+                ))}
+                {leads.length === 0 && !isDragOver && (
+                    <div className="column-empty">
+                        Arraste leads aqui
                     </div>
                 )}
-            </Droppable>
+            </div>
         </div>
     );
 }

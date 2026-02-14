@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { DragDropContext } from '@hello-pangea/dnd';
 import { STAGES } from '../utils/stages';
 import PipelineColumn from './PipelineColumn';
 import SearchBar from './SearchBar';
@@ -15,9 +14,9 @@ export default function Pipeline({
     onDeleteLead
 }) {
     const [search, setSearch] = useState('');
+    const [draggingLeadId, setDraggingLeadId] = useState(null);
 
     const filteredLeads = leads.filter(lead => {
-        // filterVendedor is applied in App.jsx, but we keep search here
         if (!search) return true;
         const s = search.toLowerCase();
         return (
@@ -29,13 +28,19 @@ export default function Pipeline({
         );
     });
 
-    const handleDragEnd = (result) => {
-        if (!result.destination) return;
-        const { draggableId, destination } = result;
-        // Don't parse int, as IDs can be UUIDs. We treat all IDs as strings for lookup.
-        const leadId = draggableId;
-        const newStage = destination.droppableId;
-        onMoveLeadToStage(leadId, newStage);
+    const handleDragStart = (leadId) => {
+        setDraggingLeadId(leadId);
+    };
+
+    const handleDragEnd = () => {
+        setDraggingLeadId(null);
+    };
+
+    const handleDropOnStage = (stageId) => {
+        if (draggingLeadId) {
+            onMoveLeadToStage(draggingLeadId, stageId);
+            setDraggingLeadId(null);
+        }
     };
 
     return (
@@ -62,22 +67,24 @@ export default function Pipeline({
                 </div>
             </div>
 
-            <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="pipeline-board">
-                    {STAGES.map(stage => {
-                        const stageLeads = filteredLeads.filter(l => l.stage === stage.id);
-                        return (
-                            <PipelineColumn
-                                key={stage.id}
-                                stage={stage}
-                                leads={stageLeads}
-                                onLeadClick={onLeadClick}
-                                onDeleteLead={onDeleteLead}
-                            />
-                        );
-                    })}
-                </div>
-            </DragDropContext>
+            <div className="pipeline-board">
+                {STAGES.map(stage => {
+                    const stageLeads = filteredLeads.filter(l => l.stage === stage.id);
+                    return (
+                        <PipelineColumn
+                            key={stage.id}
+                            stage={stage}
+                            leads={stageLeads}
+                            onLeadClick={onLeadClick}
+                            onDeleteLead={onDeleteLead}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            onDrop={handleDropOnStage}
+                            isDragging={!!draggingLeadId}
+                        />
+                    );
+                })}
+            </div>
         </div>
     );
 }
