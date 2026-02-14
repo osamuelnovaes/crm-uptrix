@@ -65,11 +65,19 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         onClose();
     };
 
-    const handleDelete = () => {
-        if (window.confirm('Tem certeza que deseja excluir este lead?')) {
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = () => {
+        if (isDeleting) {
             onDelete(lead.id);
             onClose();
+        } else {
+            setIsDeleting(true);
         }
+    };
+
+    const handleCancelDelete = () => {
+        setIsDeleting(false);
     };
 
     const handleAddVendedor = () => {
@@ -99,6 +107,7 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
                 </div>
 
                 <div className="modal-body">
+                    {/* ... form content ... */}
                     <div className="form-grid">
                         <div className="form-group">
                             <label>Nome</label>
@@ -235,13 +244,31 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
                 </div>
 
                 <div className="modal-footer">
-                    <button className="btn-danger" onClick={handleDelete}>
-                        <Trash2 size={16} /> Excluir
-                    </button>
-                    <div className="modal-footer-right">
-                        <button className="btn-secondary" onClick={onClose}>Cancelar</button>
-                        <button className="btn-primary" onClick={handleSave}>Salvar</button>
-                    </div>
+                    {isDeleting ? (
+                        <div className="delete-confirm-group" style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                className="btn-danger confirm"
+                                onClick={handleDeleteClick}
+                                style={{ background: '#dc2626', color: 'white' }}
+                            >
+                                <Trash2 size={16} /> Confirmar Exclusão
+                            </button>
+                            <button className="btn-secondary" onClick={handleCancelDelete}>
+                                Cancelar
+                            </button>
+                        </div>
+                    ) : (
+                        <button className="btn-danger" onClick={handleDeleteClick}>
+                            <Trash2 size={16} /> Excluir
+                        </button>
+                    )}
+
+                    {!isDeleting && (
+                        <div className="modal-footer-right">
+                            <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+                            <button className="btn-primary" onClick={handleSave}>Salvar</button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
