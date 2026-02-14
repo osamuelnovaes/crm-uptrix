@@ -297,8 +297,8 @@ body {
   gap: 12px;
   padding: 0 24px 24px;
   flex: 1;
-  /* No overflow here — @hello-pangea/dnd only supports one scroll parent per Droppable.
-     The column body (.pipeline-column-body) is the scroll container. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .pipeline-board::-webkit-scrollbar {
