@@ -1,52 +1,71 @@
 import { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthProvider';
 import Layout from './components/Layout';
 import Sidebar from './components/Sidebar';
 import Pipeline from './components/Pipeline';
 import Dashboard from './components/Dashboard';
 import LeadModal from './components/LeadModal';
 import ImportModal from './components/ImportModal';
+import LoginPage from './components/LoginPage';
 import { useLeads } from './hooks/useLeads';
+import { Loader } from 'lucide-react';
 import './App.css';
 
-function App() {
+function CRMApp() {
+  const { user, loading: authLoading, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('pipeline');
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
   const {
-    leads, addLead, addLeadsBatch, updateLead, deleteLead, moveLeadToStage,
+    leads, loading: dataLoading, addLead, addLeadsBatch, updateLead, deleteLead, moveLeadToStage,
     vendedores, addVendedor,
   } = useLeads();
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="loading-screen">
+        <Loader size={32} className="spin" />
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const handleLeadClick = (lead) => {
     setSelectedLead(lead);
     setShowLeadModal(true);
   };
 
-  const handleAddLead = () => {
-    const newLead = addLead({});
+  const handleAddLead = async () => {
+    const newLead = await addLead({});
     setSelectedLead(newLead);
     setShowLeadModal(true);
   };
 
-  const handleImport = (leadsData) => {
-    addLeadsBatch(leadsData);
+  const handleImport = async (leadsData) => {
+    await addLeadsBatch(leadsData);
   };
 
-  const handleUpdateLead = (id, updates) => {
-    updateLead(id, updates);
+  const handleUpdateLead = async (id, updates) => {
+    await updateLead(id, updates);
     setSelectedLead(null);
   };
 
-  const handleDeleteLead = (id) => {
-    deleteLead(id);
+  const handleDeleteLead = async (id) => {
+    await deleteLead(id);
     setSelectedLead(null);
     setShowLeadModal(false);
   };
 
   return (
-    <Layout>
+    <Layout user={user} onSignOut={signOut}>
       <Sidebar
         currentView={currentView}
         onViewChange={setCurrentView}
@@ -55,20 +74,29 @@ function App() {
       />
 
       <main className="main-content">
-        {currentView === 'pipeline' && (
-          <Pipeline
-            leads={leads}
-            vendedores={vendedores}
-            onMoveLeadToStage={moveLeadToStage}
-            onLeadClick={handleLeadClick}
-            onDeleteLead={handleDeleteLead}
-          />
-        )}
-        {currentView === 'dashboard' && (
-          <Dashboard
-            leads={leads}
-            onLeadClick={handleLeadClick}
-          />
+        {dataLoading ? (
+          <div className="loading-screen loading-inline">
+            <Loader size={24} className="spin" />
+            <p>Carregando leads...</p>
+          </div>
+        ) : (
+          <>
+            {currentView === 'pipeline' && (
+              <Pipeline
+                leads={leads}
+                vendedores={vendedores}
+                onMoveLeadToStage={moveLeadToStage}
+                onLeadClick={handleLeadClick}
+                onDeleteLead={handleDeleteLead}
+              />
+            )}
+            {currentView === 'dashboard' && (
+              <Dashboard
+                leads={leads}
+                onLeadClick={handleLeadClick}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -92,6 +120,14 @@ function App() {
         />
       )}
     </Layout>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <CRMApp />
+    </AuthProvider>
   );
 }
 

@@ -1,31 +1,21 @@
-const STORAGE_KEY = 'uptrix_leads';
-const COUNTER_KEY = 'uptrix_lead_counter';
-const VENDEDORES_KEY = 'uptrix_vendedores';
+import { supabase } from '../lib/supabaseClient';
 
-export function getLeads() {
-    try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch {
-        return [];
-    }
+// ─── Leads ───────────────────────────────────────────────
+
+export async function getLeads() {
+    const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('criado_em', { ascending: false });
+
+    if (error) { console.error('getLeads error:', error); return []; }
+
+    // Map snake_case columns to camelCase for frontend compatibility
+    return data.map(mapLeadFromDB);
 }
 
-export function saveLeads(leads) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-}
-
-export function getNextId() {
-    const counter = parseInt(localStorage.getItem(COUNTER_KEY) || '0', 10) + 1;
-    localStorage.setItem(COUNTER_KEY, String(counter));
-    return counter;
-}
-
-export function addLead(lead) {
-    const leads = getLeads();
-    const id = getNextId();
-    const newLead = {
-        id,
+export async function addLead(lead) {
+    const row = {
         nome: lead.nome || '',
         telefone: lead.telefone || '',
         email: lead.email || '',
@@ -33,96 +23,130 @@ export function addLead(lead) {
         notas: lead.notas || '',
         vendedor: lead.vendedor || '',
         stage: lead.stage || 'novo',
-        valorProposta: lead.valorProposta || 0,
-        atendeuLigacao: lead.atendeuLigacao || false,
+        valor_proposta: lead.valorProposta || 0,
+        atendeu_ligacao: lead.atendeuLigacao || false,
         historico: [
             { data: new Date().toISOString(), acao: 'Lead criado', stage: 'novo' }
         ],
-        criadoEm: new Date().toISOString(),
-        atualizadoEm: new Date().toISOString(),
     };
-    leads.push(newLead);
-    saveLeads(leads);
-    return newLead;
+
+    const { data, error } = await supabase
+        .from('leads')
+        .insert(row)
+        .select()
+        .single();
+
+    if (error) { console.error('addLead error:', error); return null; }
+    return mapLeadFromDB(data);
 }
 
-export function addLeadsBatch(leadsData) {
-    const leads = getLeads();
-    const newLeads = leadsData.map(lead => {
-        const id = getNextId();
-        return {
-            id,
-            nome: lead.nome || '',
-            telefone: lead.telefone || '',
-            email: lead.email || '',
-            empresa: lead.empresa || '',
-            notas: lead.notas || '',
-            vendedor: lead.vendedor || '',
-            stage: 'novo',
-            valorProposta: 0,
-            atendeuLigacao: false,
-            historico: [
-                { data: new Date().toISOString(), acao: 'Lead importado via planilha', stage: 'novo' }
-            ],
-            criadoEm: new Date().toISOString(),
-            atualizadoEm: new Date().toISOString(),
-        };
-    });
-    leads.push(...newLeads);
-    saveLeads(leads);
-    return newLeads;
+export async function addLeadsBatch(leadsData) {
+    const rows = leadsData.map(lead => ({
+        nome: lead.nome || '',
+        telefone: lead.telefone || '',
+        email: lead.email || '',
+        empresa: lead.empresa || '',
+        notas: lead.notas || '',
+        vendedor: lead.vendedor || '',
+        stage: 'novo',
+        valor_proposta: 0,
+        atendeu_ligacao: false,
+        historico: [
+            { data: new Date().toISOString(), acao: 'Lead importado via planilha', stage: 'novo' }
+        ],
+    }));
+
+    const { data, error } = await supabase
+        .from('leads')
+        .insert(rows)
+        .select();
+
+    if (error) { console.error('addLeadsBatch error:', error); return []; }
+    return data.map(mapLeadFromDB);
 }
 
-export function updateLead(id, updates) {
-    const leads = getLeads();
-    const index = leads.findIndex(l => l.id === id);
-    if (index === -1) return null;
+export async function updateLead(id, updates) {
+    // Build update object with snake_case
+    const row = { atualizado_em: new Date().toISOString() };
+    if (updates.nome !== undefined) row.nome = updates.nome;
+    if (updates.telefone !== undefined) row.telefone = updates.telefone;
+    if (updates.email !== undefined) row.email = updates.email;
+    if (updates.empresa !== undefined) row.empresa = updates.empresa;
+    if (updates.notas !== undefined) row.notas = updates.notas;
+    if (updates.vendedor !== undefined) row.vendedor = updates.vendedor;
+    if (updates.stage !== undefined) row.stage = updates.stage;
+    if (updates.valorProposta !== undefined) row.valor_proposta = updates.valorProposta;
+    if (updates.atendeuLigacao !== undefined) row.atendeu_ligacao = updates.atendeuLigacao;
+    if (updates.historico !== undefined) row.historico = updates.historico;
 
-    const oldLead = leads[index];
-    const updatedLead = { ...oldLead, ...updates, atualizadoEm: new Date().toISOString() };
+    const { data, error } = await supabase
+        .from('leads')
+        .update(row)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (updates.stage && updates.stage !== oldLead.stage) {
-        updatedLead.historico = [
-            ...oldLead.historico,
-            { data: new Date().toISOString(), acao: `Movido para ${updates.stage}`, stage: updates.stage }
-        ];
-    }
-
-    leads[index] = updatedLead;
-    saveLeads(leads);
-    return updatedLead;
+    if (error) { console.error('updateLead error:', error); return null; }
+    return mapLeadFromDB(data);
 }
 
-export function deleteLead(id) {
-    const leads = getLeads().filter(l => l.id !== id);
-    saveLeads(leads);
+export async function deleteLead(id) {
+    const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id);
+
+    if (error) console.error('deleteLead error:', error);
 }
 
-// Vendedores Management
-export function getVendedores() {
-    try {
-        const data = localStorage.getItem(VENDEDORES_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch {
-        return [];
-    }
+// ─── Vendedores ──────────────────────────────────────────
+
+export async function getVendedores() {
+    const { data, error } = await supabase
+        .from('vendedores')
+        .select('nome')
+        .order('nome');
+
+    if (error) { console.error('getVendedores error:', error); return []; }
+    return data.map(v => v.nome);
 }
 
-export function saveVendedores(vendedores) {
-    localStorage.setItem(VENDEDORES_KEY, JSON.stringify(vendedores));
-}
-
-export function addVendedor(nome) {
-    const vendedores = getVendedores();
+export async function addVendedor(nome) {
     const trimmed = nome.trim();
-    if (!trimmed || vendedores.includes(trimmed)) return vendedores;
-    vendedores.push(trimmed);
-    saveVendedores(vendedores);
-    return vendedores;
+    if (!trimmed) return;
+
+    const { error } = await supabase
+        .from('vendedores')
+        .upsert({ nome: trimmed }, { onConflict: 'nome' });
+
+    if (error) console.error('addVendedor error:', error);
 }
 
-export function removeVendedor(nome) {
-    const vendedores = getVendedores().filter(v => v !== nome);
-    saveVendedores(vendedores);
-    return vendedores;
+export async function removeVendedor(nome) {
+    const { error } = await supabase
+        .from('vendedores')
+        .delete()
+        .eq('nome', nome);
+
+    if (error) console.error('removeVendedor error:', error);
+}
+
+// ─── Helpers ─────────────────────────────────────────────
+
+function mapLeadFromDB(row) {
+    return {
+        id: row.id,
+        nome: row.nome,
+        telefone: row.telefone,
+        email: row.email,
+        empresa: row.empresa,
+        notas: row.notas,
+        vendedor: row.vendedor,
+        stage: row.stage,
+        valorProposta: Number(row.valor_proposta) || 0,
+        atendeuLigacao: row.atendeu_ligacao || false,
+        historico: row.historico || [],
+        criadoEm: row.criado_em,
+        atualizadoEm: row.atualizado_em,
+    };
 }
