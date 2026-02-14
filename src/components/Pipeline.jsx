@@ -5,12 +5,19 @@ import PipelineColumn from './PipelineColumn';
 import SearchBar from './SearchBar';
 import { User } from 'lucide-react';
 
-export default function Pipeline({ leads, vendedores, onMoveLeadToStage, onLeadClick, onDeleteLead }) {
+export default function Pipeline({
+    leads,
+    vendedores,
+    filterVendedor,
+    onFilterVendedorChange,
+    onMoveLeadToStage,
+    onLeadClick,
+    onDeleteLead
+}) {
     const [search, setSearch] = useState('');
-    const [filterVendedor, setFilterVendedor] = useState('');
 
     const filteredLeads = leads.filter(lead => {
-        if (filterVendedor && lead.vendedor !== filterVendedor) return false;
+        // filterVendedor is applied in App.jsx, but we keep search here
         if (!search) return true;
         const s = search.toLowerCase();
         return (
@@ -40,7 +47,7 @@ export default function Pipeline({ leads, vendedores, onMoveLeadToStage, onLeadC
                             <User size={16} />
                             <select
                                 value={filterVendedor}
-                                onChange={e => setFilterVendedor(e.target.value)}
+                                onChange={e => onFilterVendedorChange(e.target.value)}
                                 className="vendedor-select"
                             >
                                 <option value="">Todos os vendedores</option>

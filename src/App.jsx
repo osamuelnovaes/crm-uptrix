@@ -17,11 +17,16 @@ function CRMApp() {
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [filterVendedor, setFilterVendedor] = useState('');
 
   const {
     leads, loading: dataLoading, addLead, addLeadsBatch, updateLead, deleteLead, moveLeadToStage,
     vendedores, addVendedor,
   } = useLeads();
+
+  const filteredLeads = filterVendedor
+    ? leads.filter(l => l.vendedor === filterVendedor)
+    : leads;
 
   // Auth loading
   if (authLoading) {
@@ -83,8 +88,10 @@ function CRMApp() {
           <>
             {currentView === 'pipeline' && (
               <Pipeline
-                leads={leads}
+                leads={filteredLeads}
                 vendedores={vendedores}
+                filterVendedor={filterVendedor}
+                onFilterVendedorChange={setFilterVendedor}
                 onMoveLeadToStage={moveLeadToStage}
                 onLeadClick={handleLeadClick}
                 onDeleteLead={handleDeleteLead}
@@ -92,7 +99,7 @@ function CRMApp() {
             )}
             {currentView === 'dashboard' && (
               <Dashboard
-                leads={leads}
+                leads={filteredLeads}
                 onLeadClick={handleLeadClick}
               />
             )}
