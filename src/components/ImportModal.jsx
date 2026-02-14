@@ -49,16 +49,53 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
         }
     };
 
-    const handleImport = () => {
+    const handleImport = async () => {
         if (!parseResult) return;
-        const leads = mapRowsToLeads(parseResult.rows, mapping);
-        // Atribuir vendedor: usa o do dropdown se selecionado, senão usa o da planilha
-        const leadsWithVendedor = leads.map(l => ({
-            ...l,
-            vendedor: vendedor || l.vendedor || ''
-        }));
-        onImport(leadsWithVendedor);
-        onClose();
+        setLoading(true);
+        try {
+            const leads = mapRowsToLeads(parseResult.rows, mapping);
+
+            // Assign selected vendedor
+            const leadsToImport = leads.map(l => ({
+                ...l,
+                vendedor: vendedor || l.vendedor || ''
+            }));
+
+            // Check for duplicates
+            const phones = leadsToImport.map(l => l.telefone).filter(p => p);
+            const { checkLeadsExistBatch } = await import('../utils/storage');
+            const duplicates = await checkLeadsExistBatch(phones);
+
+            const duplicatePhones = new Set(duplicates.map(d => d.telefone));
+            const newLeads = leadsToImport.filter(l => !duplicatePhones.has(l.telefone));
+
+            if (duplicates.length > 0) {
+                const confirmed = window.confirm(
+                    `Encontramos ${duplicates.length} leads com números já cadastrados.\n\n` +
+                    `Eles serão ignorados para evitar duplicidade.\n` +
+                    `Deseja prosseguir com a importação de ${newLeads.length} novos leads?`
+                );
+                if (!confirmed) {
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            if (newLeads.length === 0) {
+                alert('Todos os leads da planilha já estão cadastrados!');
+                setLoading(false);
+                return;
+            }
+
+            await onImport(newLeads);
+            alert(`${newLeads.length} leads importados com sucesso! (${duplicates.length} duplicados ignorados)`);
+            onClose();
+        } catch (err) {
+            console.error('Import error:', err);
+            setError('Erro ao importar leads: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const previewLeads = parseResult ? mapRowsToLeads(parseResult.rows.slice(0, 5), mapping) : [];

@@ -57,17 +57,35 @@ export function useLeads() {
     }, []);
 
     const moveLeadToStage = useCallback(async (id, stage) => {
-        const lead = leads.find(l => l.id === id);
+        // Find lead by string comparison to handle both number and UUID types safely
+        const lead = leads.find(l => String(l.id) === String(id));
         if (!lead) return;
 
+        // Use the real ID type from the found object
+        const realId = lead.id;
+
+        // 1. Optimistic Update (Immediate Feedback)
+        setLeads(prev => prev.map(l => l.id === realId ? { ...l, stage } : l));
+
         const newHistorico = [
-            ...lead.historico,
+            ...(lead.historico || []),
             { data: new Date().toISOString(), acao: `Movido para ${stage}`, stage }
         ];
 
-        const updated = await storage.updateLead(id, { stage, historico: newHistorico });
-        if (updated) {
-            setLeads(prev => prev.map(l => l.id === id ? updated : l));
+        // 2. Persist to DB
+        try {
+            const updated = await storage.updateLead(realId, { stage, historico: newHistorico });
+            if (updated) {
+                // Confirm with server data
+                setLeads(prev => prev.map(l => l.id === realId ? updated : l));
+            } else {
+                // Revert on failure
+                setLeads(prev => prev.map(l => l.id === realId ? lead : l));
+            }
+        } catch (error) {
+            console.error('Error moving lead:', error);
+            // Revert on error
+            setLeads(prev => prev.map(l => l.id === realId ? lead : l));
         }
     }, [leads]);
 

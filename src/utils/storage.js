@@ -40,6 +40,24 @@ export async function addLead(lead) {
     return mapLeadFromDB(data);
 }
 
+export async function checkLeadsExistBatch(phones) {
+    if (!phones || phones.length === 0) return [];
+
+    // Clean phones to match DB storage (assuming raw for now based on previous simple check)
+    // If DB has mixed formats, this is hard. Assuming exact match for now.
+
+    // Split into chunks if too many? Supabase can handle reasonable number.
+    // Let's do a simple IN query.
+
+    const { data, error } = await supabase
+        .from('leads')
+        .select('telefone, vendedor')
+        .in('telefone', phones);
+
+    if (error) { console.error('checkLeadsExistBatch error:', error); return []; }
+    return data; // returns array of {telefone, vendedor}
+}
+
 export async function addLeadsBatch(leadsData) {
     const rows = leadsData.map(lead => ({
         nome: lead.nome || '',

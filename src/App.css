@@ -188,8 +188,11 @@ body {
 /* Main Content */
 .main-content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
+  /* Prevent nested scrolling for DnD */
   background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Pipeline View */
@@ -294,8 +297,8 @@ body {
   gap: 12px;
   padding: 0 24px 24px;
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
+  /* No overflow here — @hello-pangea/dnd only supports one scroll parent per Droppable.
+     The column body (.pipeline-column-body) is the scroll container. */
 }
 
 .pipeline-board::-webkit-scrollbar {
@@ -1591,4 +1594,36 @@ body {
 .login-switch:hover {
   color: var(--text-primary);
   text-decoration: underline;
+}
+
+/* Layout Filter */
+.layout-filter {
+  margin-right: 1rem;
+}
+
+.filter-select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-select:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.filter-select option {
+  background: var(--bg-secondary);
+  color: white;
+}
+
+.user-div {
+  color: rgba(255, 255, 255, 0.3);
+  margin-right: 1rem;
 }

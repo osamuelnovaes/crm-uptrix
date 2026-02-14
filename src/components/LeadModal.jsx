@@ -47,7 +47,17 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         setForm(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        // Validation: Check duplicate phone if it's a new lead or phone changed
+        if (!lead.id && form.telefone) {
+            const { checkLeadExists } = await import('../utils/storage');
+            const existing = await checkLeadExists(form.telefone);
+            if (existing) {
+                alert(`Este número já está cadastrado para o vendedor: ${existing.vendedor || 'Sem vendedor'}.`);
+                return;
+            }
+        }
+
         onUpdate(lead.id, {
             ...form,
             valorProposta: parseFloat(form.valorProposta) || 0,

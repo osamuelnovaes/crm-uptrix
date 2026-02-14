@@ -32,7 +32,8 @@ export default function Pipeline({
     const handleDragEnd = (result) => {
         if (!result.destination) return;
         const { draggableId, destination } = result;
-        const leadId = parseInt(draggableId, 10);
+        // Don't parse int, as IDs can be UUIDs. We treat all IDs as strings for lookup.
+        const leadId = draggableId;
         const newStage = destination.droppableId;
         onMoveLeadToStage(leadId, newStage);
     };
