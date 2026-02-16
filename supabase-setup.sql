@@ -15,8 +15,12 @@ CREATE TABLE IF NOT EXISTS leads (
   atendeu_ligacao BOOLEAN DEFAULT FALSE,
   historico JSONB DEFAULT '[]',
   criado_em TIMESTAMPTZ DEFAULT now(),
+  whatsapp_status TEXT DEFAULT 'nao_enviado',
   atualizado_em TIMESTAMPTZ DEFAULT now()
 );
+
+-- Se a tabela já existe, adicionar a coluna:
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS whatsapp_status TEXT DEFAULT 'nao_enviado';
 
 -- Tabela de vendedores
 CREATE TABLE IF NOT EXISTS vendedores (

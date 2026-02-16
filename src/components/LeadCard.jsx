@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Phone, Mail, Building2, GripVertical, User, Trash2, Check, X } from 'lucide-react';
+import { Phone, Mail, Building2, GripVertical, User, Trash2, Check, X, MessageCircle } from 'lucide-react';
 import { getStage } from '../utils/stages';
+import { openWhatsApp, WA_STATUS_COLORS } from '../utils/whatsapp';
 
 function getDisplayName(lead) {
     if (lead.nome) return lead.nome;
@@ -12,6 +13,9 @@ function getDisplayName(lead) {
 export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragEnd }) {
     const stage = getStage(lead.stage);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const waStatus = lead.whatsappStatus || 'nao_enviado';
+    const waColor = WA_STATUS_COLORS[waStatus] || '#ef4444';
 
     // reset delete state if mouse leaves card
     const handleMouseLeave = () => {
@@ -33,13 +37,14 @@ export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragE
     };
 
     const handleDragStart = (e) => {
-        // Set drag data
         e.dataTransfer.effectAllowed = 'move';
-        // We can set data if needed, but we use state in parent
         onDragStart(lead.id);
+    };
 
-        // Add a ghost image or styling class if needed
-        // native drag image is usually fine
+    const handleWhatsAppClick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openWhatsApp(lead.telefone);
     };
 
     return (
@@ -62,34 +67,54 @@ export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragE
                 </div>
                 <h4 className="lead-card-name">{getDisplayName(lead)}</h4>
 
-                {isDeleting ? (
-                    <div className="delete-confirm-actions">
+                <div className="lead-card-actions">
+                    {lead.telefone && (
                         <button
-                            className="lead-card-delete confirm"
-                            onClick={handleDeleteClick}
-                            title="Confirmar exclusão"
-                            style={{ color: '#ef4444', background: '#fee2e2' }}
+                            className="lead-card-whatsapp"
+                            onClick={handleWhatsAppClick}
+                            title="Abrir WhatsApp"
                         >
-                            <Check size={13} />
+                            <MessageCircle size={13} />
+                            <span
+                                className="wa-status-dot"
+                                style={{ backgroundColor: waColor }}
+                            />
                         </button>
-                        <button
-                            className="lead-card-delete cancel"
-                            onClick={handleCancelDelete}
-                            title="Cancelar"
-                        >
-                            <X size={13} />
+                    )}
+
+                    {isDeleting ? (
+                        <div className="delete-confirm-actions">
+                            <button
+                                className="lead-card-delete confirm"
+                                onClick={handleDeleteClick}
+                                title="Confirmar exclusão"
+                                style={{ color: '#ef4444', background: '#fee2e2' }}
+                            >
+                                <Check size={13} />
+                            </button>
+                            <button
+                                className="lead-card-delete cancel"
+                                onClick={handleCancelDelete}
+                                title="Cancelar"
+                            >
+                                <X size={13} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button className="lead-card-delete" onClick={handleDeleteClick} title="Excluir lead">
+                            <Trash2 size={13} />
                         </button>
-                    </div>
-                ) : (
-                    <button className="lead-card-delete" onClick={handleDeleteClick} title="Excluir lead">
-                        <Trash2 size={13} />
-                    </button>
-                )}
+                    )}
+                </div>
             </div>
 
             <div className="lead-card-info">
                 {lead.telefone && (
-                    <span className="lead-card-detail">
+                    <span
+                        className="lead-card-detail lead-card-phone-link"
+                        onClick={handleWhatsAppClick}
+                        title="Abrir no WhatsApp"
+                    >
                         <Phone size={12} />
                         {lead.telefone}
                     </span>

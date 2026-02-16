@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Trash2, Clock, Phone, PhoneOff, UserPlus } from 'lucide-react';
+import { X, Trash2, Clock, Phone, PhoneOff, UserPlus, MessageCircle } from 'lucide-react';
 import { STAGES, getStage } from '../utils/stages';
+import { openWhatsApp, WA_STATUS, WA_STATUS_LABELS, WA_STATUS_COLORS } from '../utils/whatsapp';
 
 function getDisplayName(lead) {
     if (lead.nome) return lead.nome;
@@ -20,6 +21,7 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         stage: 'novo',
         valorProposta: 0,
         atendeuLigacao: false,
+        whatsappStatus: 'nao_enviado',
     });
     const [newVendedor, setNewVendedor] = useState('');
 
@@ -35,6 +37,7 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
                 stage: lead.stage || 'novo',
                 valorProposta: lead.valorProposta || 0,
                 atendeuLigacao: lead.atendeuLigacao || false,
+                whatsappStatus: lead.whatsappStatus || 'nao_enviado',
             });
         }
     }, [lead]);
@@ -89,6 +92,16 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         }
     };
 
+    const handleWhatsAppClick = () => {
+        if (form.telefone) {
+            openWhatsApp(form.telefone);
+            // Auto-mark as enviado if currently nao_enviado
+            if (form.whatsappStatus === WA_STATUS.NAO_ENVIADO) {
+                handleChange('whatsappStatus', WA_STATUS.ENVIADO);
+            }
+        }
+    };
+
     const formatDate = (iso) => {
         return new Date(iso).toLocaleString('pt-BR', {
             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -96,14 +109,28 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         });
     };
 
+    const waColor = WA_STATUS_COLORS[form.whatsappStatus] || '#ef4444';
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content lead-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header" style={{ borderBottom: `2px solid ${stage.color}` }}>
                     <h2>{lead.id ? getDisplayName(lead) : 'Novo Lead'}</h2>
-                    <button className="modal-close" onClick={onClose}>
-                        <X size={20} />
-                    </button>
+                    <div className="modal-header-actions">
+                        {form.telefone && (
+                            <button
+                                className="btn-whatsapp"
+                                onClick={handleWhatsAppClick}
+                                title="Abrir WhatsApp"
+                            >
+                                <MessageCircle size={16} />
+                                WhatsApp
+                            </button>
+                        )}
+                        <button className="modal-close" onClick={onClose}>
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="modal-body">
@@ -120,12 +147,24 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
                         </div>
                         <div className="form-group">
                             <label>Telefone</label>
-                            <input
-                                type="text"
-                                value={form.telefone}
-                                onChange={e => handleChange('telefone', e.target.value)}
-                                placeholder="(00) 00000-0000"
-                            />
+                            <div className="phone-input-group">
+                                <input
+                                    type="text"
+                                    value={form.telefone}
+                                    onChange={e => handleChange('telefone', e.target.value)}
+                                    placeholder="(00) 00000-0000"
+                                />
+                                {form.telefone && (
+                                    <button
+                                        type="button"
+                                        className="btn-whatsapp-inline"
+                                        onClick={handleWhatsAppClick}
+                                        title="Abrir WhatsApp"
+                                    >
+                                        <MessageCircle size={14} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <div className="form-group">
                             <label>Email</label>
@@ -144,6 +183,32 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
                                 onChange={e => handleChange('empresa', e.target.value)}
                                 placeholder="Nome da empresa"
                             />
+                        </div>
+                    </div>
+
+                    {/* WhatsApp Status */}
+                    <div className="form-group">
+                        <label>
+                            <MessageCircle size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                            Status WhatsApp
+                        </label>
+                        <div className="wa-status-selector">
+                            {Object.entries(WA_STATUS).map(([key, value]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={`wa-status-btn ${form.whatsappStatus === value ? 'active' : ''}`}
+                                    style={{
+                                        borderColor: form.whatsappStatus === value ? WA_STATUS_COLORS[value] : 'transparent',
+                                        backgroundColor: form.whatsappStatus === value ? WA_STATUS_COLORS[value] + '20' : 'transparent',
+                                        color: form.whatsappStatus === value ? WA_STATUS_COLORS[value] : '#94a3b8',
+                                    }}
+                                    onClick={() => handleChange('whatsappStatus', value)}
+                                >
+                                    <span className="wa-status-dot-btn" style={{ backgroundColor: WA_STATUS_COLORS[value] }} />
+                                    {WA_STATUS_LABELS[value]}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -274,3 +339,4 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
         </div>
     );
 }
+

@@ -1642,3 +1642,164 @@ body {
   color: rgba(255, 255, 255, 0.3);
   margin-right: 1rem;
 }
+
+/* ─── WhatsApp Integration ─────────────────────── */
+
+/* Card WhatsApp button */
+.lead-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lead-card-whatsapp {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #25D366;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.lead-card-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.15);
+  transform: scale(1.1);
+}
+
+/* Status dot on card */
+.wa-status-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-card);
+}
+
+/* Phone link on card */
+.lead-card-phone-link {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.lead-card-phone-link:hover {
+  color: #25D366 !important;
+}
+
+/* Modal header actions */
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* WhatsApp button in modal header */
+.btn-whatsapp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-whatsapp:hover {
+  background: linear-gradient(135deg, #2be874, #1ebf96);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Phone input group with inline WhatsApp button */
+.phone-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+}
+
+.phone-input-group input {
+  flex: 1;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.btn-whatsapp-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  background: rgba(37, 211, 102, 0.12);
+  color: #25D366;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-whatsapp-inline:hover {
+  background: rgba(37, 211, 102, 0.25);
+  color: #128C7E;
+}
+
+/* WhatsApp Status Selector */
+.wa-status-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wa-status-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  background: transparent;
+}
+
+.wa-status-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.wa-status-btn.active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.wa-status-dot-btn {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Pulse animation for "enviado" status */
+@keyframes wa-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(234, 179, 8, 0);
+  }
+}

@@ -25,6 +25,7 @@ export async function addLead(lead) {
         stage: lead.stage || 'novo',
         valor_proposta: lead.valorProposta || 0,
         atendeu_ligacao: lead.atendeuLigacao || false,
+        whatsapp_status: lead.whatsappStatus || 'nao_enviado',
         historico: [
             { data: new Date().toISOString(), acao: 'Lead criado', stage: 'novo' }
         ],
@@ -69,6 +70,7 @@ export async function addLeadsBatch(leadsData) {
         stage: 'novo',
         valor_proposta: 0,
         atendeu_ligacao: false,
+        whatsapp_status: 'nao_enviado',
         historico: [
             { data: new Date().toISOString(), acao: 'Lead importado via planilha', stage: 'novo' }
         ],
@@ -95,6 +97,7 @@ export async function updateLead(id, updates) {
     if (updates.stage !== undefined) row.stage = updates.stage;
     if (updates.valorProposta !== undefined) row.valor_proposta = updates.valorProposta;
     if (updates.atendeuLigacao !== undefined) row.atendeu_ligacao = updates.atendeuLigacao;
+    if (updates.whatsappStatus !== undefined) row.whatsapp_status = updates.whatsappStatus;
     if (updates.historico !== undefined) row.historico = updates.historico;
 
     const { data, error } = await supabase
@@ -163,6 +166,7 @@ function mapLeadFromDB(row) {
         stage: row.stage,
         valorProposta: Number(row.valor_proposta) || 0,
         atendeuLigacao: row.atendeu_ligacao || false,
+        whatsappStatus: row.whatsapp_status || 'nao_enviado',
         historico: row.historico || [],
         criadoEm: row.criado_em,
         atualizadoEm: row.atualizado_em,
