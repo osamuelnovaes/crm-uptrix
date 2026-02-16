@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import 'dotenv/config';
 import makeWASocket, {
     useMultiFileAuthState,
     DisconnectReason,
@@ -12,6 +13,7 @@ import { Boom } from '@hapi/boom';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { useSupabaseAuthState } from './auth_supabase.js';
 import { makeInMemoryStore } from './store.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,12 +40,27 @@ const AUTH_DIR = path.join(__dirname, 'auth_info');
 
 // ─── WhatsApp Connection ────────────────────────
 async function startWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    let state, saveCreds;
+
+    // Check if using Supabase for auth
+    const useSupabase = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
+
+    if (useSupabase) {
+        console.log('☁️ Usando Supabase para autenticação persistente');
+        const auth = await useSupabaseAuthState(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+        state = auth.state;
+        saveCreds = auth.saveCreds;
+    } else {
+        console.log('📂 Usando sistema de arquivos local para autenticação');
+        const fileAuth = await useMultiFileAuthState(AUTH_DIR);
+        state = fileAuth.state;
+        saveCreds = fileAuth.saveCreds;
+    }
 
     sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false, // We handle QR via socket
-        browser: ['Ubuntu', 'Chrome', '20.0.04'], // Standard browser signature
+        printQRInTerminal: false,
+        browser: ['Ubuntu', 'Chrome', '20.0.04'],
         connectTimeoutMs: 60000,
     });
 
@@ -73,10 +90,14 @@ async function startWhatsApp() {
 
             if (reason === DisconnectReason.loggedOut) {
                 console.log('🔴 Desconectado — sessão removida');
-                // Remove auth folder to force re-scan
-                if (fs.existsSync(AUTH_DIR)) {
+
+                // Only remove local folder if NOT using Supabase
+                // (Supabase cleanup is handled by removing rows, which Baileys usually does,
+                // or we can manually invoke it if needed, but file deletion would crash here)
+                if (!process.env.SUPABASE_URL && fs.existsSync(AUTH_DIR)) {
                     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                 }
+
                 await delay(2000);
                 startWhatsApp();
             } else {
