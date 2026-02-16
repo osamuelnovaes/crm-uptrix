@@ -1,100 +1,191 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, MessageCircle, ExternalLink, QrCode, Smartphone, Search, Phone, User } from 'lucide-react';
-import { formatPhoneForWhatsApp } from '../utils/whatsapp';
+import { useState, useEffect, useCallback } from 'react';
+import {
+    X, MessageCircle, Smartphone, Search, Phone, User,
+    Wifi, WifiOff, Loader, LogOut
+} from 'lucide-react';
+import WhatsAppChat from './WhatsAppChat';
+import * as ws from '../utils/whatsappSocket';
 
-/**
- * WhatsApp Panel – painel lateral integrado ao CRM.
- * Abre o WhatsApp Web em uma popup controlada posicionada ao lado do CRM.
- */
-export default function WhatsAppPanel({ phone, leads, onClose, onSelectLead }) {
-    const [popupRef, setPopupRef] = useState(null);
-    const [connected, setConnected] = useState(false);
+export default function WhatsAppPanel({ phone, leads, onClose }) {
+    const [socketStatus, setSocketStatus] = useState('connecting'); // connecting | connected | error
+    const [waStatus, setWaStatus] = useState('disconnected'); // disconnected | qr | connected
+    const [qrCode, setQrCode] = useState(null);
+    const [userInfo, setUserInfo] = useState(null);
+    const [chats, setChats] = useState([]);
+    const [activeChat, setActiveChat] = useState(null); // { jid, phone, name }
+    const [chatMessages, setChatMessages] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
-    const popupInterval = useRef(null);
 
-    // Leads com telefone
-    const leadsWithPhone = (leads || []).filter(l => l.telefone);
-
-    const filteredLeads = searchTerm
-        ? leadsWithPhone.filter(l => {
-            const term = searchTerm.toLowerCase();
-            return (
-                (l.nome && l.nome.toLowerCase().includes(term)) ||
-                (l.telefone && l.telefone.includes(term)) ||
-                (l.empresa && l.empresa.toLowerCase().includes(term))
-            );
-        })
-        : leadsWithPhone;
-
-    const openWhatsAppPopup = useCallback((targetPhone) => {
-        const formatted = targetPhone ? formatPhoneForWhatsApp(targetPhone) : '';
-        const url = formatted
-            ? `https://wa.me/${formatted}`
-            : 'https://web.whatsapp.com';
-
-        // Calculate popup position (right side of screen)
-        const popupWidth = 420;
-        const popupHeight = window.screen.availHeight - 100;
-        const popupLeft = window.screen.availWidth - popupWidth - 20;
-        const popupTop = 50;
-
-        const features = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop},toolbar=no,menubar=no,scrollbars=yes,resizable=yes,status=no`;
-
-        // Close existing popup if open
-        if (popupRef && !popupRef.closed) {
-            popupRef.location.href = url;
-        } else {
-            const popup = window.open(url, 'whatsapp_crm', features);
-            setPopupRef(popup);
-            setConnected(true);
-        }
-    }, [popupRef]);
-
-    // Auto-open when phone is provided
+    // Connect socket on mount
     useEffect(() => {
-        if (phone) {
-            openWhatsAppPopup(phone);
-        }
-    }, [phone]); // eslint-disable-line react-hooks/exhaustive-deps
+        ws.connectSocket();
 
-    // Monitor popup close
-    useEffect(() => {
-        if (popupRef) {
-            popupInterval.current = setInterval(() => {
-                if (popupRef.closed) {
-                    setPopupRef(null);
-                    setConnected(false);
-                    clearInterval(popupInterval.current);
+        const unsubs = [
+            ws.on('socket-connected', () => {
+                setSocketStatus('connected');
+            }),
+            ws.on('socket-error', () => {
+                setSocketStatus('error');
+            }),
+            ws.on('socket-disconnected', () => {
+                setSocketStatus('connecting');
+            }),
+            ws.on('connection-status', (status) => {
+                setWaStatus(status);
+                if (status === 'connected') {
+                    setQrCode(null);
+                    ws.getChats();
                 }
-            }, 1000);
-        }
-        return () => {
-            if (popupInterval.current) clearInterval(popupInterval.current);
-        };
-    }, [popupRef]);
+            }),
+            ws.on('qr', (dataUrl) => {
+                setQrCode(dataUrl);
+            }),
+            ws.on('user-info', (info) => {
+                setUserInfo(info);
+            }),
+            ws.on('chats-list', (list) => {
+                setChats(list || []);
+            }),
+            ws.on('chat-messages', ({ jid, messages }) => {
+                setChatMessages(prev => ({ ...prev, [jid]: messages }));
+            }),
+            ws.on('chat-opened', ({ jid, phone: p, messages }) => {
+                setChatMessages(prev => ({ ...prev, [jid]: messages }));
+                setActiveChat({ jid, phone: p, name: p });
+            }),
+            ws.on('new-message', (msg) => {
+                const jid = msg.jid;
+                setChatMessages(prev => {
+                    const existing = prev[jid] || [];
+                    // Avoid duplicates
+                    if (existing.find(m => m.id === msg.id)) return prev;
+                    return { ...prev, [jid]: [...existing, msg] };
+                });
+                // Update chat list
+                ws.getChats();
+            }),
+            ws.on('send-error', (err) => {
+                console.error('Erro ao enviar:', err);
+            }),
+        ];
 
-    // Clean up popup on unmount
-    useEffect(() => {
         return () => {
-            if (popupInterval.current) clearInterval(popupInterval.current);
+            unsubs.forEach(u => u && u());
         };
     }, []);
 
-    const handleLeadClick = (lead) => {
-        openWhatsAppPopup(lead.telefone);
-        if (onSelectLead) onSelectLead(lead);
+    // Open chat by phone when provided from CRM lead
+    useEffect(() => {
+        if (phone && waStatus === 'connected') {
+            ws.openChatByPhone(phone);
+        }
+    }, [phone, waStatus]);
+
+    const handleOpenChat = useCallback((chat) => {
+        setActiveChat({ jid: chat.jid, phone: chat.phone, name: chat.name });
+        ws.getMessages(chat.jid);
+    }, []);
+
+    const handleSendMessage = useCallback((jid, text) => {
+        ws.sendMessage(jid, text);
+    }, []);
+
+    const handleBack = useCallback(() => {
+        setActiveChat(null);
+    }, []);
+
+    const handleDisconnect = useCallback(() => {
+        ws.disconnectWhatsApp();
+        setWaStatus('disconnected');
+        setQrCode(null);
+        setChats([]);
+        setActiveChat(null);
+        setChatMessages({});
+        setUserInfo(null);
+    }, []);
+
+    // Merge CRM leads with phone into contacts (when no WA chats)
+    const crmContacts = (leads || [])
+        .filter(l => l.telefone)
+        .map(l => ({
+            jid: l.telefone.replace(/\D/g, '') + '@s.whatsapp.net',
+            name: l.nome || l.telefone,
+            phone: l.telefone.replace(/\D/g, ''),
+            isGroup: false,
+            unreadCount: 0,
+            lastMessage: '',
+            timestamp: 0,
+            isCrmLead: true,
+        }));
+
+    // Combine WA chats + CRM contacts (WA chats first, then CRM leads not in WA)
+    const allContacts = waStatus === 'connected'
+        ? [
+            ...chats,
+            ...crmContacts.filter(c => !chats.find(ch => ch.jid === c.jid)),
+        ]
+        : crmContacts;
+
+    const filteredContacts = searchTerm
+        ? allContacts.filter(c => {
+            const t = searchTerm.toLowerCase();
+            return (c.name && c.name.toLowerCase().includes(t))
+                || (c.phone && c.phone.includes(t));
+        })
+        : allContacts;
+
+    const formatTime = (ts) => {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const now = new Date();
+        if (d.toDateString() === now.toDateString()) {
+            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     };
 
-    const handleOpenGeneral = () => {
-        openWhatsAppPopup(null);
-    };
+    // ─── Server not available ───
+    if (socketStatus === 'error') {
+        return (
+            <div className="whatsapp-panel">
+                <div className="whatsapp-panel-header">
+                    <div className="whatsapp-panel-title">
+                        <MessageCircle size={20} />
+                        <h2>WhatsApp</h2>
+                    </div>
+                    <button className="whatsapp-panel-close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="wa-status-screen">
+                    <WifiOff size={48} />
+                    <h3>Servidor não encontrado</h3>
+                    <p>Inicie o servidor WhatsApp:</p>
+                    <code className="wa-code-block">cd server && npm start</code>
+                    <button className="wa-retry-btn" onClick={() => ws.connectSocket()}>
+                        Tentar novamente
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-    const getDisplayName = (lead) => {
-        if (lead.nome) return lead.nome;
-        if (lead.telefone) return lead.telefone;
-        if (lead.email) return lead.email;
-        return `Lead #${lead.id}`;
-    };
+    // ─── Active chat view ───
+    if (activeChat) {
+        const messages = chatMessages[activeChat.jid] || [];
+        return (
+            <div className="whatsapp-panel">
+                <WhatsAppChat
+                    jid={activeChat.jid}
+                    phone={activeChat.phone}
+                    contactName={activeChat.name}
+                    messages={messages}
+                    onSend={handleSendMessage}
+                    onBack={handleBack}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="whatsapp-panel">
@@ -103,76 +194,114 @@ export default function WhatsAppPanel({ phone, leads, onClose, onSelectLead }) {
                 <div className="whatsapp-panel-title">
                     <MessageCircle size={20} />
                     <h2>WhatsApp</h2>
-                    <span className={`whatsapp-status-badge ${connected ? 'connected' : ''}`}>
-                        {connected ? 'Conectado' : 'Desconectado'}
+                    <span className={`whatsapp-status-badge ${waStatus === 'connected' ? 'connected' : ''}`}>
+                        {waStatus === 'connected' ? 'Conectado' : waStatus === 'qr' ? 'Aguardando QR' : 'Desconectado'}
                     </span>
                 </div>
-                <button className="whatsapp-panel-close" onClick={onClose}>
-                    <X size={18} />
-                </button>
-            </div>
-
-            {/* Connect Section */}
-            <div className="whatsapp-connect-section">
-                <button className="whatsapp-connect-btn" onClick={handleOpenGeneral}>
-                    <QrCode size={18} />
-                    <span>{connected ? 'Abrir WhatsApp Web' : 'Conectar WhatsApp'}</span>
-                    <ExternalLink size={14} />
-                </button>
-                {!connected && (
-                    <p className="whatsapp-connect-hint">
-                        <Smartphone size={13} />
-                        Clique para abrir o WhatsApp Web e escanear o QR Code
-                    </p>
-                )}
-            </div>
-
-            {/* Search */}
-            <div className="whatsapp-search">
-                <Search size={15} className="whatsapp-search-icon" />
-                <input
-                    type="text"
-                    placeholder="Buscar contato..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="whatsapp-search-input"
-                />
-            </div>
-
-            {/* Contacts List */}
-            <div className="whatsapp-contacts-list">
-                {filteredLeads.length === 0 ? (
-                    <div className="whatsapp-empty">
-                        <Phone size={24} />
-                        <p>{searchTerm ? 'Nenhum contato encontrado' : 'Nenhum lead com telefone cadastrado'}</p>
-                    </div>
-                ) : (
-                    filteredLeads.map(lead => (
-                        <button
-                            key={lead.id}
-                            className="whatsapp-contact-item"
-                            onClick={() => handleLeadClick(lead)}
-                        >
-                            <div className="whatsapp-contact-avatar">
-                                <User size={16} />
-                            </div>
-                            <div className="whatsapp-contact-info">
-                                <span className="whatsapp-contact-name">{getDisplayName(lead)}</span>
-                                <span className="whatsapp-contact-phone">
-                                    <Phone size={11} />
-                                    {lead.telefone}
-                                </span>
-                                {lead.empresa && (
-                                    <span className="whatsapp-contact-empresa">{lead.empresa}</span>
-                                )}
-                            </div>
-                            <div className="whatsapp-contact-action">
-                                <MessageCircle size={16} />
-                            </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {waStatus === 'connected' && (
+                        <button className="wa-disconnect-btn" onClick={handleDisconnect} title="Desconectar WhatsApp">
+                            <LogOut size={16} />
                         </button>
-                    ))
-                )}
+                    )}
+                    <button className="whatsapp-panel-close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
             </div>
+
+            {/* QR Code Screen */}
+            {(waStatus === 'qr' || waStatus === 'disconnected') && (
+                <div className="wa-qr-section">
+                    {qrCode ? (
+                        <>
+                            <div className="wa-qr-container">
+                                <img src={qrCode} alt="QR Code WhatsApp" className="wa-qr-image" />
+                            </div>
+                            <div className="wa-qr-instructions">
+                                <Smartphone size={16} />
+                                <div>
+                                    <p><strong>Escaneie o QR Code</strong></p>
+                                    <p className="wa-qr-step">1. Abra o WhatsApp no celular</p>
+                                    <p className="wa-qr-step">2. Toque em Configurações &gt; Dispositivos conectados</p>
+                                    <p className="wa-qr-step">3. Toque em "Conectar dispositivo"</p>
+                                    <p className="wa-qr-step">4. Aponte a câmera para o QR Code</p>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="wa-qr-loading">
+                            <Loader size={32} className="spin" />
+                            <p>Gerando QR Code...</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Connected: User Info */}
+            {waStatus === 'connected' && userInfo && (
+                <div className="wa-user-info">
+                    <Wifi size={14} />
+                    <span>Conectado como <strong>{userInfo.name}</strong></span>
+                </div>
+            )}
+
+            {/* Connected: Search + Contacts */}
+            {waStatus === 'connected' && (
+                <>
+                    <div className="whatsapp-search">
+                        <Search size={15} className="whatsapp-search-icon" />
+                        <input
+                            type="text"
+                            placeholder="Buscar contato..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="whatsapp-search-input"
+                        />
+                    </div>
+
+                    <div className="whatsapp-contacts-list">
+                        {filteredContacts.length === 0 ? (
+                            <div className="whatsapp-empty">
+                                <Phone size={24} />
+                                <p>{searchTerm ? 'Nenhum contato encontrado' : 'Nenhuma conversa ainda'}</p>
+                            </div>
+                        ) : (
+                            filteredContacts.map(chat => (
+                                <button
+                                    key={chat.jid}
+                                    className="whatsapp-contact-item"
+                                    onClick={() => handleOpenChat(chat)}
+                                >
+                                    <div className="whatsapp-contact-avatar">
+                                        {chat.isGroup ? '#' : <User size={16} />}
+                                    </div>
+                                    <div className="whatsapp-contact-info">
+                                        <div className="whatsapp-contact-row">
+                                            <span className="whatsapp-contact-name">{chat.name}</span>
+                                            {chat.timestamp > 0 && (
+                                                <span className="whatsapp-contact-time">{formatTime(chat.timestamp)}</span>
+                                            )}
+                                        </div>
+                                        {chat.lastMessage && (
+                                            <span className="whatsapp-contact-last-msg">{chat.lastMessage}</span>
+                                        )}
+                                        {!chat.lastMessage && chat.phone && (
+                                            <span className="whatsapp-contact-phone">
+                                                <Phone size={11} />
+                                                {chat.phone}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {chat.unreadCount > 0 && (
+                                        <span className="whatsapp-unread-badge">{chat.unreadCount}</span>
+                                    )}
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
