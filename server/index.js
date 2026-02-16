@@ -335,7 +335,9 @@ async function autoMoveLeadToRespondeu(phone) {
         .neq('stage', 'reuniao')
         .neq('stage', 'proposta')
         .neq('stage', 'fechado')
-        .neq('stage', 'perdido');
+        .neq('stage', 'fechado')
+        .neq('stage', 'perdido')
+        .range(0, 9999);
 
     if (error || !leads) return;
 

@@ -6,7 +6,8 @@ export async function getLeads() {
     const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .order('criado_em', { ascending: false });
+        .order('criado_em', { ascending: false })
+        .range(0, 9999);
 
     if (error) { console.error('getLeads error:', error); return []; }
 
