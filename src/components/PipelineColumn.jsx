@@ -10,7 +10,8 @@ export default function PipelineColumn({
     onDragStart,
     onDragEnd,
     onDrop,
-    isDragging
+    isDragging,
+    onOpenWhatsApp
 }) {
     const IconComponent = Icons[stage.icon] || Icons.Circle;
     const [isDragOver, setIsDragOver] = useState(false);
@@ -68,6 +69,7 @@ export default function PipelineColumn({
                         onDelete={onDeleteLead}
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
+                        onOpenWhatsApp={onOpenWhatsApp}
                     />
                 ))}
                 {leads.length === 0 && !isDragOver && (

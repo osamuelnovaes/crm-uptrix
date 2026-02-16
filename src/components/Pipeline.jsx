@@ -11,7 +11,8 @@ export default function Pipeline({
     onFilterVendedorChange,
     onMoveLeadToStage,
     onLeadClick,
-    onDeleteLead
+    onDeleteLead,
+    onOpenWhatsApp
 }) {
     const [search, setSearch] = useState('');
     const [draggingLeadId, setDraggingLeadId] = useState(null);
@@ -81,6 +82,7 @@ export default function Pipeline({
                             onDragEnd={handleDragEnd}
                             onDrop={handleDropOnStage}
                             isDragging={!!draggingLeadId}
+                            onOpenWhatsApp={onOpenWhatsApp}
                         />
                     );
                 })}

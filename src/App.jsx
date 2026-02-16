@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import LeadModal from './components/LeadModal';
 import ImportModal from './components/ImportModal';
 import LoginPage from './components/LoginPage';
+import WhatsAppPanel from './components/WhatsAppPanel';
 import { useLeads } from './hooks/useLeads';
 import { Loader } from 'lucide-react';
 import './App.css';
@@ -18,6 +19,10 @@ function CRMApp() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [filterVendedor, setFilterVendedor] = useState('');
+
+  // WhatsApp panel state
+  const [showWhatsAppPanel, setShowWhatsAppPanel] = useState(false);
+  const [whatsAppPhone, setWhatsAppPhone] = useState(null);
 
   const {
     leads, loading: dataLoading, addLead, addLeadsBatch, updateLead, deleteLead, moveLeadToStage,
@@ -69,16 +74,30 @@ function CRMApp() {
     setShowLeadModal(false);
   };
 
+  // WhatsApp: abrir painel com telefone específico
+  const handleOpenWhatsApp = (phone) => {
+    setWhatsAppPhone(phone || null);
+    setShowWhatsAppPanel(true);
+  };
+
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+    if (view === 'whatsapp') {
+      setShowWhatsAppPanel(true);
+      setWhatsAppPhone(null);
+    }
+  };
+
   return (
     <Layout user={user} onSignOut={signOut}>
       <Sidebar
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={handleViewChange}
         onImport={() => setShowImportModal(true)}
         onAddLead={handleAddLead}
       />
 
-      <main className="main-content">
+      <main className={`main-content ${showWhatsAppPanel ? 'with-whatsapp-panel' : ''}`}>
         {dataLoading ? (
           <div className="loading-screen loading-inline">
             <Loader size={24} className="spin" />
@@ -95,6 +114,7 @@ function CRMApp() {
                 onMoveLeadToStage={moveLeadToStage}
                 onLeadClick={handleLeadClick}
                 onDeleteLead={handleDeleteLead}
+                onOpenWhatsApp={handleOpenWhatsApp}
               />
             )}
             {currentView === 'dashboard' && (
@@ -103,9 +123,27 @@ function CRMApp() {
                 onLeadClick={handleLeadClick}
               />
             )}
+            {currentView === 'whatsapp' && (
+              <div className="whatsapp-view">
+                <div className="whatsapp-view-header">
+                  <h2>WhatsApp Integrado</h2>
+                  <p>Selecione um contato para iniciar uma conversa no WhatsApp</p>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* WhatsApp Panel */}
+      {showWhatsAppPanel && (
+        <WhatsAppPanel
+          phone={whatsAppPhone}
+          leads={leads}
+          onClose={() => { setShowWhatsAppPanel(false); setWhatsAppPhone(null); if (currentView === 'whatsapp') setCurrentView('pipeline'); }}
+          onSelectLead={handleLeadClick}
+        />
+      )}
 
       {showLeadModal && selectedLead && (
         <LeadModal
@@ -115,6 +153,7 @@ function CRMApp() {
           onUpdate={handleUpdateLead}
           onDelete={handleDeleteLead}
           onAddVendedor={addVendedor}
+          onOpenWhatsApp={handleOpenWhatsApp}
         />
       )}
 

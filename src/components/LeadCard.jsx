@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Phone, Mail, Building2, GripVertical, User, Trash2, Check, X, MessageCircle } from 'lucide-react';
 import { getStage } from '../utils/stages';
-import { openWhatsApp, WA_STATUS_COLORS } from '../utils/whatsapp';
+import { WA_STATUS_COLORS } from '../utils/whatsapp';
 
 function getDisplayName(lead) {
     if (lead.nome) return lead.nome;
@@ -10,7 +10,7 @@ function getDisplayName(lead) {
     return `Lead #${lead.id}`;
 }
 
-export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragEnd }) {
+export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragEnd, onOpenWhatsApp }) {
     const stage = getStage(lead.stage);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -44,7 +44,9 @@ export default function LeadCard({ lead, onClick, onDelete, onDragStart, onDragE
     const handleWhatsAppClick = (e) => {
         e.stopPropagation();
         e.preventDefault();
-        openWhatsApp(lead.telefone);
+        if (onOpenWhatsApp) {
+            onOpenWhatsApp(lead.telefone);
+        }
     };
 
     return (

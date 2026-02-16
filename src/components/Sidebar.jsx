@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Upload, Plus } from 'lucide-react';
+import { LayoutDashboard, Kanban, Upload, Plus, MessageCircle } from 'lucide-react';
 
 export default function Sidebar({ currentView, onViewChange, onImport, onAddLead }) {
     return (
@@ -25,6 +25,13 @@ export default function Sidebar({ currentView, onViewChange, onImport, onAddLead
                 >
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
+                </button>
+                <button
+                    className={`nav-item whatsapp-nav ${currentView === 'whatsapp' ? 'active' : ''}`}
+                    onClick={() => onViewChange('whatsapp')}
+                >
+                    <MessageCircle size={20} />
+                    <span>WhatsApp</span>
                 </button>
             </nav>
 
