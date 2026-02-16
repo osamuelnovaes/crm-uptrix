@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
 // Automatically use Render URL in production (GitHub Pages) or localhost in dev
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:3001' : 'https://crm-uptrix.onrender.com');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:3001' : 'https://crm-uptrix-008.onrender.com');
 
 let socket = null;
 let listeners = {};
