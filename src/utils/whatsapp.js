@@ -27,24 +27,12 @@ export function cleanPhone(phone) {
 }
 
 /**
- * Formata o telefone para o padrão WhatsApp (com código do país 55 para Brasil).
- * Aceita formatos: (11) 99999-9999, 11999999999, +5511999999999, etc.
+ * Formata o telefone para o padrão WhatsApp.
+ * Apenas remove caracteres não-numéricos, mantendo o número exatamente como cadastrado.
  */
 export function formatPhoneForWhatsApp(phone) {
     const digits = cleanPhone(phone);
     if (!digits) return '';
-
-    // Se já começa com 55 e tem 12-13 dígitos, usar como está
-    if (digits.startsWith('55') && digits.length >= 12) {
-        return digits;
-    }
-
-    // Se tem 10-11 dígitos (DDD + número), adicionar 55
-    if (digits.length >= 10 && digits.length <= 11) {
-        return '55' + digits;
-    }
-
-    // Caso contrário, retornar como está (pode ser número internacional)
     return digits;
 }
 
