@@ -42,8 +42,9 @@ async function startWhatsApp() {
 
     sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
-        browser: ['Uptrix CRM', 'Chrome', '1.0.0'],
+        printQRInTerminal: false, // We handle QR via socket
+        browser: ['Ubuntu', 'Chrome', '20.0.04'], // Standard browser signature
+        connectTimeoutMs: 60000,
     });
 
     store.bind(sock.ev);
