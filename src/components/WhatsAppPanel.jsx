@@ -6,7 +6,7 @@ import {
 import WhatsAppChat from './WhatsAppChat';
 import * as ws from '../utils/whatsappSocket';
 
-export default function WhatsAppPanel({ phone, leads, onClose }) {
+export default function WhatsAppPanel({ phone, leads, onClose, mode = 'sidebar' }) {
     const [socketStatus, setSocketStatus] = useState('connecting'); // connecting | connected | error
     const [waStatus, setWaStatus] = useState('disconnected'); // disconnected | qr | connected
     const [qrCode, setQrCode] = useState(null);
@@ -147,7 +147,7 @@ export default function WhatsAppPanel({ phone, leads, onClose }) {
     // ─── Server not available ───
     if (socketStatus === 'error') {
         return (
-            <div className="whatsapp-panel">
+            <div className={`whatsapp-panel ${mode === 'full' ? 'full-mode' : ''}`}>
                 <div className="whatsapp-panel-header">
                     <div className="whatsapp-panel-title">
                         <MessageCircle size={20} />
@@ -174,7 +174,7 @@ export default function WhatsAppPanel({ phone, leads, onClose }) {
     if (activeChat) {
         const messages = chatMessages[activeChat.jid] || [];
         return (
-            <div className="whatsapp-panel">
+            <div className={`whatsapp-panel ${mode === 'full' ? 'full-mode' : ''}`}>
                 <WhatsAppChat
                     jid={activeChat.jid}
                     phone={activeChat.phone}
@@ -188,7 +188,7 @@ export default function WhatsAppPanel({ phone, leads, onClose }) {
     }
 
     return (
-        <div className="whatsapp-panel">
+        <div className={`whatsapp-panel ${mode === 'full' ? 'full-mode' : ''}`}>
             {/* Header */}
             <div className="whatsapp-panel-header">
                 <div className="whatsapp-panel-title">

@@ -1820,6 +1820,18 @@ body {
   z-index: 50;
 }
 
+.whatsapp-panel.full-mode {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  border-left: none;
+  animation: none;
+  z-index: 1;
+  background: var(--bg-primary);
+}
+
 @keyframes slideInRight {
   from {
     transform: translateX(100%);

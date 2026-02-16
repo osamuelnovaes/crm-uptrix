@@ -83,7 +83,7 @@ function CRMApp() {
   const handleViewChange = (view) => {
     setCurrentView(view);
     if (view === 'whatsapp') {
-      setShowWhatsAppPanel(true);
+      setShowWhatsAppPanel(false);
       setWhatsAppPhone(null);
     }
   };
@@ -124,12 +124,12 @@ function CRMApp() {
               />
             )}
             {currentView === 'whatsapp' && (
-              <div className="whatsapp-view">
-                <div className="whatsapp-view-header">
-                  <h2>WhatsApp Integrado</h2>
-                  <p>Selecione um contato para iniciar uma conversa no WhatsApp</p>
-                </div>
-              </div>
+              <WhatsAppPanel
+                mode="full"
+                leads={leads}
+                onClose={() => setCurrentView('pipeline')}
+                onSelectLead={handleLeadClick}
+              />
             )}
           </>
         )}
