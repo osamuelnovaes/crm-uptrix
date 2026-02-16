@@ -53,7 +53,7 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
         if (!parseResult) return;
         setLoading(true);
         try {
-            const leads = mapRowsToLeads(parseResult.rows, mapping);
+            const leads = mapRowsToLeads(parseResult.rows, mapping, parseResult.headers);
 
             // Assign selected vendedor
             const leadsToImport = leads.map(l => ({
@@ -98,7 +98,7 @@ export default function ImportModal({ onClose, onImport, vendedores, onAddVended
         }
     };
 
-    const previewLeads = parseResult ? mapRowsToLeads(parseResult.rows.slice(0, 5), mapping) : [];
+    const previewLeads = parseResult ? mapRowsToLeads(parseResult.rows.slice(0, 5), mapping, parseResult.headers) : [];
 
     return (
         <div className="modal-overlay" onClick={onClose}>

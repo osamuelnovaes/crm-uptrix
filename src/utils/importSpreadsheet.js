@@ -1,8 +1,8 @@
 import * as XLSX from 'xlsx';
 
 const COLUMN_MAPPINGS = {
-    nome: ['nome', 'name', 'nome completo', 'full name', 'contato', 'contact', 'cliente', 'client'],
-    telefone: ['telefone', 'phone', 'tel', 'celular', 'mobile', 'whatsapp', 'fone', 'número', 'numero'],
+    nome: ['nome', 'name', 'nome completo', 'full name', 'contato', 'contact', 'cliente', 'client', 'saved_name', 'public_name', 'display_name'],
+    telefone: ['telefone', 'phone', 'tel', 'celular', 'mobile', 'whatsapp', 'fone', 'número', 'numero', 'phone_number', 'formatted_phone'],
     email: ['email', 'e-mail', 'mail', 'correio'],
     empresa: ['empresa', 'company', 'organização', 'organizacao', 'org', 'firma'],
     vendedor: ['vendedor', 'responsavel', 'sales', 'salesperson', 'consultor', 'atendente'],
@@ -57,7 +57,7 @@ export function parseSpreadsheet(file) {
     });
 }
 
-export function mapRowsToLeads(rows, mapping) {
+export function mapRowsToLeads(rows, mapping, headers = []) {
     return rows.map((row) => {
         const lead = {
             nome: mapping.nome !== undefined ? String(row[mapping.nome] || '') : '',
@@ -65,7 +65,32 @@ export function mapRowsToLeads(rows, mapping) {
             email: mapping.email !== undefined ? String(row[mapping.email] || '') : '',
             empresa: mapping.empresa !== undefined ? String(row[mapping.empresa] || '') : '',
             vendedor: mapping.vendedor !== undefined ? String(row[mapping.vendedor] || '') : '',
+            notas: ''
         };
+
+        // Clean phone number (keep only digits)
+        lead.telefone = lead.telefone.replace(/\D/g, '');
+
+        // Fallback: name to phone if empty
+        if (!lead.nome && lead.telefone) {
+            lead.nome = lead.telefone;
+        }
+
+        // Capture all other columns as notes
+        const mappedIndices = new Set(Object.values(mapping));
+        const extraInfo = [];
+
+        row.forEach((cell, index) => {
+            if (!mappedIndices.has(index) && cell !== undefined && cell !== '') {
+                const header = headers[index] || `Coluna ${index + 1}`;
+                extraInfo.push(`${header}: ${cell}`);
+            }
+        });
+
+        if (extraInfo.length > 0) {
+            lead.notas = extraInfo.join('\n');
+        }
+
         return lead;
-    }).filter(lead => lead.telefone || lead.nome || lead.email);
+    }).filter(lead => lead.telefone || lead.nome);
 }
