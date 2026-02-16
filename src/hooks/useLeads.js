@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as storage from '../utils/storage';
+import * as ws from '../utils/whatsappSocket';
 
 export function useLeads() {
     const [leads, setLeads] = useState([]);
@@ -19,6 +20,19 @@ export function useLeads() {
             setLoading(false);
         }
         loadData();
+    }, []);
+
+    // Listen for real-time updates from server (e.g. auto-move)
+    useEffect(() => {
+        const unsub = ws.on('lead-updated', ({ id, stage }) => {
+            setLeads(prev => prev.map(l => {
+                if (l.id === id) {
+                    return { ...l, stage, atualizadoEm: new Date().toISOString() };
+                }
+                return l;
+            }));
+        });
+        return () => unsub();
     }, []);
 
     const refresh = useCallback(async () => {

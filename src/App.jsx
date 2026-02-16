@@ -30,32 +30,6 @@ function CRMApp() {
     vendedores, addVendedor,
   } = useLeads();
 
-  // Auto-move lead to "respondeu" when contact replies via WhatsApp
-  useEffect(() => {
-    ws.connectSocket();
-
-    const unsub = ws.on('new-message', (msg) => {
-      if (msg.fromMe) return;
-
-      const incomingPhone = (msg.phone || '').replace(/\D/g, '');
-      if (!incomingPhone) return;
-
-      const matchedLead = leads.find(l => {
-        const leadPhone = (l.telefone || '').replace(/\D/g, '');
-        return leadPhone && (incomingPhone.endsWith(leadPhone) || leadPhone.endsWith(incomingPhone));
-      });
-
-      if (!matchedLead) return;
-
-      const earlyStages = ['novo', 'contatado'];
-      if (earlyStages.includes(matchedLead.stage)) {
-        moveLeadToStage(matchedLead.id, 'respondeu');
-      }
-    });
-
-    return () => unsub();
-  }, [leads, moveLeadToStage]);
-
   const filteredLeads = filterVendedor
     ? leads.filter(l => l.vendedor === filterVendedor)
     : leads;

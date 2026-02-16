@@ -10,7 +10,7 @@ let listeners = {};
  * Conecta ao servidor WhatsApp backend.
  */
 export function connectSocket() {
-    if (socket?.connected) return socket;
+    if (socket) return socket;
 
     socket = io(BACKEND_URL, {
         transports: ['websocket', 'polling'],

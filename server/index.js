@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { useSupabaseAuthState } from './auth_supabase.js';
 import { makeInMemoryStore } from './store.js';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,11 @@ let connectionState = 'disconnected'; // disconnected | qr | connected
 let qrDataUrl = null;
 const store = makeInMemoryStore({});
 const AUTH_DIR = path.join(__dirname, 'auth_info');
+
+// Supabase client for auto-move leads
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 // ─── WhatsApp Connection ────────────────────────
 async function startWhatsApp() {
@@ -126,7 +132,7 @@ async function startWhatsApp() {
     sock.ev.on('creds.update', saveCreds);
 
     // Incoming messages
-    sock.ev.on('messages.upsert', (msg) => {
+    sock.ev.on('messages.upsert', async (msg) => {
         const messages = msg.messages;
         if (!messages || msg.type !== 'notify') return;
 
@@ -138,6 +144,13 @@ async function startWhatsApp() {
                 const parsed = parseMessage(m);
                 if (parsed) {
                     io.emit('new-message', parsed);
+
+                    // Auto-move lead to 'respondeu' when contact replies
+                    if (!parsed.fromMe && supabase) {
+                        autoMoveLeadToRespondeu(parsed.phone).catch(err =>
+                            console.error('Auto-move error:', err.message)
+                        );
+                    }
                 }
             }
         }
@@ -289,7 +302,67 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('🔌 Frontend desconectado');
     });
+    socket.on('disconnect', () => {
+        console.log('🔌 Frontend desconectado');
+    });
 });
+
+// ─── Auto-Move Logic ────────────────────────────
+async function autoMoveLeadToRespondeu(phone) {
+    if (!phone || !supabase) return;
+
+    // 1. Find lead with matching phone
+    // We need to check if the lead's phone ends with the incoming phone or vice-versa
+    // Since Supabase doesn't support "endsWith" easily in complex queries without extensions,
+    // we'll fetch leads that *might* match and filter in JS.
+    // Fetching leads with non-empty phone is enough filter for now.
+
+    // Actually, let's try to match exact or at least contain
+    const { data: leads, error } = await supabase
+        .from('leads')
+        .select('*')
+        .neq('stage', 'respondeu') // Optimization: ignore if already responded or later
+        .neq('stage', 'ligacao')
+        .neq('stage', 'reuniao')
+        .neq('stage', 'proposta')
+        .neq('stage', 'fechado')
+        .neq('stage', 'perdido');
+
+    if (error || !leads) return;
+
+    const incoming = phone.replace(/\D/g, '');
+
+    const matchedLead = leads.find(l => {
+        if (!l.telefone) return false;
+        const leadPhone = l.telefone.replace(/\D/g, '');
+        return leadPhone && (incoming.endsWith(leadPhone) || leadPhone.endsWith(incoming));
+    });
+
+    if (matchedLead) {
+        // Only move if matches early stages
+        const earlyStages = ['novo', 'contatado'];
+        if (earlyStages.includes(matchedLead.stage)) {
+            console.log(`📍 Moving lead ${matchedLead.nome} (${matchedLead.id}) to Respondeu`);
+
+            const newHistorico = [
+                ...(matchedLead.historico || []),
+                { data: new Date().toISOString(), acao: 'Movido para Respondeu (Auto)', stage: 'respondeu' }
+            ];
+
+            await supabase
+                .from('leads')
+                .update({
+                    stage: 'respondeu',
+                    updated_at: new Date().toISOString(),
+                    historico: newHistorico
+                })
+                .eq('id', matchedLead.id);
+
+            // Emit event to frontend to update UI if connected
+            io.emit('lead-updated', { id: matchedLead.id, stage: 'respondeu' });
+        }
+    }
+}
 
 // ─── REST Endpoints ─────────────────────────────
 app.get('/', (req, res) => {
