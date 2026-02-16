@@ -41,6 +41,17 @@ export const useSupabaseAuthState = async (supabaseUrl, supabaseKey) => {
         }
     };
 
+    const clearAuthState = async () => {
+        try {
+            await supabase
+                .from('whatsapp_sessions')
+                .delete()
+                .neq('id', 'dummy'); // delete everything
+        } catch (error) {
+            console.error('Error clearing auth state', error);
+        }
+    };
+
     const creds = await readData('creds') || initAuthCreds();
 
     return {
@@ -80,5 +91,6 @@ export const useSupabaseAuthState = async (supabaseUrl, supabaseKey) => {
         saveCreds: () => {
             return writeData(creds, 'creds');
         },
+        clearAuthState,
     };
 };

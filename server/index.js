@@ -46,7 +46,7 @@ const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supaba
 
 // ─── WhatsApp Connection ────────────────────────
 async function startWhatsApp() {
-    let state, saveCreds;
+    let state, saveCreds, clearAuthState;
 
     // Check if using Supabase for auth
     const useSupabase = process.env.SUPABASE_URL && process.env.SUPABASE_KEY;
@@ -56,6 +56,7 @@ async function startWhatsApp() {
         const auth = await useSupabaseAuthState(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
         state = auth.state;
         saveCreds = auth.saveCreds;
+        clearAuthState = auth.clearAuthState;
     } else {
         console.log('📂 Usando sistema de arquivos local para autenticação');
         const fileAuth = await useMultiFileAuthState(AUTH_DIR);
@@ -100,7 +101,10 @@ async function startWhatsApp() {
                 // Only remove local folder if NOT using Supabase
                 // (Supabase cleanup is handled by removing rows, which Baileys usually does,
                 // or we can manually invoke it if needed, but file deletion would crash here)
-                if (!process.env.SUPABASE_URL && fs.existsSync(AUTH_DIR)) {
+                if (useSupabase && clearAuthState) {
+                    console.log('☁️ Limpando sessão do Supabase...');
+                    await clearAuthState();
+                } else if (!useSupabase && fs.existsSync(AUTH_DIR)) {
                     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                 }
 
@@ -296,6 +300,11 @@ io.on('connection', (socket) => {
     socket.on('disconnect-whatsapp', async () => {
         if (sock) {
             await sock.logout();
+            // Also ensure we clear auth state manually if needed
+            if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+                const auth = await useSupabaseAuthState(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+                if (auth.clearAuthState) await auth.clearAuthState();
+            }
         }
     });
 
