@@ -292,10 +292,15 @@ io.on('connection', (socket) => {
 });
 
 // ─── REST Endpoints ─────────────────────────────
+app.get('/', (req, res) => {
+    res.send('🚀 Servidor WhatsApp Online!');
+});
+
 app.get('/status', (req, res) => {
     res.json({
         status: connectionState,
         user: connectionState === 'connected' ? sock?.user : null,
+        mode: process.env.SUPABASE_URL ? 'Cloud (Supabase)' : 'Local',
     });
 });
 
