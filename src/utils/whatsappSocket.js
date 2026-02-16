@@ -14,9 +14,10 @@ export function connectSocket() {
 
     socket = io(BACKEND_URL, {
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 10,
-        reconnectionDelay: 2000,
-        timeout: 10000,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        timeout: 60000,
     });
 
     socket.on('connect', () => {

@@ -296,6 +296,10 @@ app.get('/', (req, res) => {
     res.send('🚀 Servidor WhatsApp Online!');
 });
 
+app.get('/ping', (req, res) => {
+    res.send('pong');
+});
+
 app.get('/status', (req, res) => {
     res.json({
         status: connectionState,
@@ -311,4 +315,11 @@ server.listen(PORT, () => {
     console.log(`\n🚀 Servidor WhatsApp rodando em http://localhost:${PORT}`);
     console.log('📡 Aguardando conexão do CRM...\n');
     startWhatsApp();
+
+    // Keep-alive: self-ping every 14 minutes to prevent Render free tier from sleeping
+    const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 minutes
+    setInterval(() => {
+        fetch(`http://localhost:${PORT}/ping`).catch(() => { });
+        console.log('🏓 Keep-alive ping');
+    }, KEEP_ALIVE_INTERVAL);
 });

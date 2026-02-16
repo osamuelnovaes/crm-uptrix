@@ -7,7 +7,7 @@ import WhatsAppChat from './WhatsAppChat';
 import * as ws from '../utils/whatsappSocket';
 
 export default function WhatsAppPanel({ phone, leads, onClose, mode = 'sidebar' }) {
-    const [socketStatus, setSocketStatus] = useState('connecting'); // connecting | connected | error
+    const [socketStatus, setSocketStatus] = useState('connecting'); // connecting | connected | reconnecting
     const [waStatus, setWaStatus] = useState('disconnected'); // disconnected | qr | connected
     const [qrCode, setQrCode] = useState(null);
     const [userInfo, setUserInfo] = useState(null);
@@ -25,7 +25,7 @@ export default function WhatsAppPanel({ phone, leads, onClose, mode = 'sidebar' 
                 setSocketStatus('connected');
             }),
             ws.on('socket-error', () => {
-                setSocketStatus('error');
+                setSocketStatus('reconnecting');
             }),
             ws.on('socket-disconnected', () => {
                 setSocketStatus('connecting');
@@ -144,8 +144,8 @@ export default function WhatsAppPanel({ phone, leads, onClose, mode = 'sidebar' 
         return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     };
 
-    // ─── Server not available ───
-    if (socketStatus === 'error') {
+    // ─── Server connecting / reconnecting ───
+    if (socketStatus === 'connecting' || socketStatus === 'reconnecting') {
         return (
             <div className={`whatsapp-panel ${mode === 'full' ? 'full-mode' : ''}`}>
                 <div className="whatsapp-panel-header">
@@ -158,11 +158,10 @@ export default function WhatsAppPanel({ phone, leads, onClose, mode = 'sidebar' 
                     </button>
                 </div>
                 <div className="wa-status-screen">
-                    <WifiOff size={48} />
-                    <h3>Servidor não encontrado</h3>
-                    <p>Inicie o servidor WhatsApp:</p>
-                    <code className="wa-code-block">cd server && npm start</code>
-                    <button className="wa-retry-btn" onClick={() => ws.connectSocket()}>
+                    <Loader size={48} className="spin" />
+                    <h3>Conectando ao servidor...</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', maxWidth: '260px' }}>O servidor pode levar até 1 minuto para iniciar na primeira vez.</p>
+                    <button className="wa-retry-btn" onClick={() => ws.connectSocket()} style={{ marginTop: '12px' }}>
                         Tentar novamente
                     </button>
                 </div>
