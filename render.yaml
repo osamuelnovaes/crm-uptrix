@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: crm-uptrix-whatsapp-server
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+    autoDeploy: false
