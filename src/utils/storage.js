@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 export async function getLeads() {
     let allLeads = [];
     let from = 0;
-    const step = 5000; // Chunk size
+    const step = 1000; // Chunk size
     let hasMore = true;
 
     while (hasMore) {

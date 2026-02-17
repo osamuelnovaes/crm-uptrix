@@ -329,7 +329,7 @@ async function autoMoveLeadToRespondeu(phone) {
     // Actually, let's try to match exact or at least contain
     let leads = [];
     let from = 0;
-    const step = 5000;
+    const step = 1000;
     let hasMore = true;
 
     while (hasMore) {
