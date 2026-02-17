@@ -327,19 +327,41 @@ async function autoMoveLeadToRespondeu(phone) {
     // Fetching leads with non-empty phone is enough filter for now.
 
     // Actually, let's try to match exact or at least contain
-    const { data: leads, error } = await supabase
-        .from('leads')
-        .select('*')
-        .neq('stage', 'respondeu') // Optimization: ignore if already responded or later
-        .neq('stage', 'ligacao')
-        .neq('stage', 'reuniao')
-        .neq('stage', 'proposta')
-        .neq('stage', 'fechado')
-        .neq('stage', 'fechado')
-        .neq('stage', 'perdido')
-        .range(0, 9999);
+    let leads = [];
+    let from = 0;
+    const step = 5000;
+    let hasMore = true;
 
-    if (error || !leads) return;
+    while (hasMore) {
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .neq('stage', 'respondeu') // Optimization: ignore if already responded or later
+            .neq('stage', 'ligacao')
+            .neq('stage', 'reuniao')
+            .neq('stage', 'proposta')
+            .neq('stage', 'fechado')
+            .neq('stage', 'perdido')
+            .range(from, from + step - 1);
+
+        if (error) {
+            console.error('autoMoveLeadToRespondeu error:', error);
+            break;
+        }
+
+        if (data && data.length > 0) {
+            leads = leads.concat(data);
+            if (data.length < step) {
+                hasMore = false;
+            } else {
+                from += step;
+            }
+        } else {
+            hasMore = false;
+        }
+    }
+
+    if (leads.length === 0) return;
 
     const incoming = phone.replace(/\D/g, '');
 

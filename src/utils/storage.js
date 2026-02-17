@@ -3,16 +3,37 @@ import { supabase } from '../lib/supabaseClient';
 // ─── Leads ───────────────────────────────────────────────
 
 export async function getLeads() {
-    const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('criado_em', { ascending: false })
-        .range(0, 9999);
+    let allLeads = [];
+    let from = 0;
+    const step = 5000; // Chunk size
+    let hasMore = true;
 
-    if (error) { console.error('getLeads error:', error); return []; }
+    while (hasMore) {
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .order('criado_em', { ascending: false })
+            .range(from, from + step - 1);
+
+        if (error) {
+            console.error('getLeads error:', error);
+            break;
+        }
+
+        if (data && data.length > 0) {
+            allLeads = allLeads.concat(data);
+            if (data.length < step) {
+                hasMore = false;
+            } else {
+                from += step;
+            }
+        } else {
+            hasMore = false;
+        }
+    }
 
     // Map snake_case columns to camelCase for frontend compatibility
-    return data.map(mapLeadFromDB);
+    return allLeads.map(mapLeadFromDB);
 }
 
 export async function addLead(lead) {
