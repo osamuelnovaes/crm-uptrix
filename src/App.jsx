@@ -7,9 +7,8 @@ import Dashboard from './components/Dashboard';
 import LeadModal from './components/LeadModal';
 import ImportModal from './components/ImportModal';
 import LoginPage from './components/LoginPage';
-import WhatsAppPanel from './components/WhatsAppPanel';
 import { useLeads } from './hooks/useLeads';
-import * as ws from './utils/whatsappSocket';
+import { openWhatsAppWeb } from './utils/whatsapp';
 import { Loader } from 'lucide-react';
 import './App.css';
 
@@ -20,10 +19,6 @@ function CRMApp() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [filterVendedor, setFilterVendedor] = useState('');
-
-  // WhatsApp panel state
-  const [showWhatsAppPanel, setShowWhatsAppPanel] = useState(false);
-  const [whatsAppPhone, setWhatsAppPhone] = useState(null);
 
   const {
     leads, loading: dataLoading, addLead, addLeadsBatch, updateLead, deleteLead, moveLeadToStage,
@@ -75,30 +70,21 @@ function CRMApp() {
     setShowLeadModal(false);
   };
 
-  // WhatsApp: abrir painel com telefone específico
+  // WhatsApp: abre WhatsApp Web em nova aba
   const handleOpenWhatsApp = (phone) => {
-    setWhatsAppPhone(phone || null);
-    setShowWhatsAppPanel(true);
-  };
-
-  const handleViewChange = (view) => {
-    setCurrentView(view);
-    if (view === 'whatsapp') {
-      setShowWhatsAppPanel(false);
-      setWhatsAppPhone(null);
-    }
+    openWhatsAppWeb(phone);
   };
 
   return (
     <Layout user={user} onSignOut={signOut}>
       <Sidebar
         currentView={currentView}
-        onViewChange={handleViewChange}
+        onViewChange={setCurrentView}
         onImport={() => setShowImportModal(true)}
         onAddLead={handleAddLead}
       />
 
-      <main className={`main-content ${showWhatsAppPanel ? 'with-whatsapp-panel' : ''}`}>
+      <main className="main-content">
         {dataLoading ? (
           <div className="loading-screen loading-inline">
             <Loader size={24} className="spin" />
@@ -124,27 +110,9 @@ function CRMApp() {
                 onLeadClick={handleLeadClick}
               />
             )}
-            {currentView === 'whatsapp' && (
-              <WhatsAppPanel
-                mode="full"
-                leads={leads}
-                onClose={() => setCurrentView('pipeline')}
-                onSelectLead={handleLeadClick}
-              />
-            )}
           </>
         )}
       </main>
-
-      {/* WhatsApp Panel */}
-      {showWhatsAppPanel && (
-        <WhatsAppPanel
-          phone={whatsAppPhone}
-          leads={leads}
-          onClose={() => { setShowWhatsAppPanel(false); setWhatsAppPhone(null); if (currentView === 'whatsapp') setCurrentView('pipeline'); }}
-          onSelectLead={handleLeadClick}
-        />
-      )}
 
       {showLeadModal && selectedLead && (
         <LeadModal

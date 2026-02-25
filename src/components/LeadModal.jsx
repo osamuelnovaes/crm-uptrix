@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2, Clock, Phone, PhoneOff, UserPlus, MessageCircle } from 'lucide-react';
 import { STAGES, getStage } from '../utils/stages';
-import { WA_STATUS, WA_STATUS_LABELS, WA_STATUS_COLORS } from '../utils/whatsapp';
+import { WA_STATUS, WA_STATUS_LABELS, WA_STATUS_COLORS, openWhatsAppWeb } from '../utils/whatsapp';
 
 function getDisplayName(lead) {
     if (lead.nome) return lead.nome;
@@ -94,9 +94,7 @@ export default function LeadModal({ lead, vendedores, onClose, onUpdate, onDelet
 
     const handleWhatsAppClick = () => {
         if (form.telefone) {
-            if (onOpenWhatsApp) {
-                onOpenWhatsApp(form.telefone);
-            }
+            openWhatsAppWeb(form.telefone);
             // Auto-mark as enviado if currently nao_enviado
             if (form.whatsappStatus === WA_STATUS.NAO_ENVIADO) {
                 handleChange('whatsappStatus', WA_STATUS.ENVIADO);
